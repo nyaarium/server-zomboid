@@ -1,0 +1,31 @@
+{
+    startOptions: {
+        start: {
+            label: "Start Server",
+            role: "user",
+            command: ["bash", "start.sh", "game"],
+        },
+    },
+    ports: [
+        { port: 16261, protocol: "udp" },
+        { port: 16262, protocol: "udp" },
+    ],
+    patterns: {
+        // Stdout substrings; gracefulExit distinguishes clean stops from the vendor's exit 0.
+        ready: "SERVER STARTED",
+        gracefulExit: "Shutdown handling finished",
+        // Not wired: connection events are in rotating Logs/<boot-time>_connections.txt files.
+        // playerJoin: event="fully-connected".*username="([^"]+)"
+        // playerLeave: event="disconnect" message="receive-disconnect".*username="([^"]+)"
+    },
+    logging: {
+        mode: "stdout",
+    },
+    stopAction: {
+        type: "stdin",
+        command: "quit",
+        // Graceful shutdown completed in 12 seconds during validation.
+        enterDelaySec: 60,
+        forceKillSec: 300,
+    },
+}

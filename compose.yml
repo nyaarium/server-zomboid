@@ -1,0 +1,18 @@
+x-build: &app-build
+  context: .
+  dockerfile: docker/Dockerfile
+  pull: true
+
+services:
+  app:
+    build: *app-build
+    image: zomboid-app
+    container_name: app
+    restart: unless-stopped
+    stdin_open: true
+    volumes:
+      - ./data/zomboid:/root/Zomboid
+      - ./data/workshop:/app/steamapps/workshop
+    ports:
+      - "16261:16261/udp"
+      - "16262:16262/udp"
