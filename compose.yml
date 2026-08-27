@@ -11,7 +11,11 @@ services:
     restart: unless-stopped
     stdin_open: true
     volumes:
+      # Persistent server data.
       - ./data/zomboid:/root/Zomboid
+      # Persistent game install. Updated at startup.
+      - ./data/game:/app
+      # Persistent workshop cache. Separate from the game install.
       - ./data/workshop:/app/steamapps/workshop
     ports:
       - "16261:16261/udp"

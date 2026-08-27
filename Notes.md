@@ -25,7 +25,7 @@ of waiting for the password.
 From the server console, run:
 
 ```
-setaccesslevel "username" "admin"
+setaccesslevel "Nyaa" "admin"
 ```
 
 Available levels: Admin, Moderator, Overseer, GM, Observer. Access persists in the user database;
@@ -33,18 +33,25 @@ players must relog for a changed level to apply.
 
 ## Workshop mods
 
-The server downloads mods to `/app/steamapps/workshop/content/108600/<workshop id>/`.
-`compose.yml` mounts `./data/workshop` at `/app/steamapps/workshop` so mods survive rebuilds.
-
-Mount only `workshop`; `appmanifest_380870.acf` is stored in the parent `steamapps/` directory,
-and mounting that parent would hide the game manifest.
+- Mod path: `/app/steamapps/workshop/content/108600/<workshop id>/`.
+- Mount: `./data/workshop`, nested inside the `./data/game` install volume.
+- Separate cache mount. Survives game revalidation and reinstall.
 
 ## Map load order
 
-- `Map=` folder order. Earlier entries win. Vanilla `Muldraugh, KY` stays last.
+- `Map=` folder order. Earlier entries win. Vanilla `Muldraugh, KY` last.
 - Map rows at the bottom of `mod-table.md`. Workshop ID and enabled-key validation in `write-mod-config.sh`.
 - Map-cell files: `*.lotheader`, `*.lotpack`, `chunkdata_*.bin`. Spawn-location mods use `servertest_spawnregions.lua` instead.
-- Changes to `Map=` breaks the save. Wipe `Saves/`.
+- Map changes: save reset required. Wipe `Saves/`.
+
+## Spawn regions
+
+- Labels and descriptions: `<Map>.json` under `media/lua/shared/Translate/EN/`; not `map.info`.
+- B41 `title.txt` layouts display the raw placeholder. McCoy Estate uses this layout.
+- Client-side ordering: `MapsOrder.lua` places `Muldraugh, KY` first; `SpawnRegions()` orders the rest.
+- Sandbox-only maps: Echo Creek, Fallas Lake, March Ridge, and Valley Station. Omitted from
+  `servertest_spawnregions.lua`.
+- Restart after region-list changes.
 
 ## AnimSets case workaround
 
@@ -64,12 +71,18 @@ may still log these errors; the next boot applies the links.
 
 ## Updating the game
 
-`start.sh game` uses the Docker cache. Update these variables in `docker/Dockerfile`:
-
-- `STEAM_BRANCH` is passed to steamcmd as `-beta`; it defaults to `public`. List branches with:
+- `docker-entrypoint.sh` runs `steamcmd` at startup.
+- Game install: `./data/game`; persistent and separate from the image.
+- `STEAM_BRANCH`: `-beta` value. Default: `public`. List branches with:
   `steamcmd +login anonymous +app_info_update 1 +app_info_print 380870`.
-- `GAME_BUILD` invalidates the install layer. It records the installed build but does not pin it;
-  steamcmd installs the branch's newest build. `docker/install.sh` prints the installed ID.
+- `STEAM_VALIDATE=1`: integrity validation for partial or damaged installs.
+- Steam unavailable: warning and boot from the installed files. An empty install still fails.
+- Superseded install: remove `data/game/steamapps/appmanifest_380870.acf`, then run once with
+  `STEAM_VALIDATE=1`.
 
-Changing `GAME_BUILD` can trigger a full game download because the install is a Docker layer, not a
-mounted volume. Rebuild when clients report a version mismatch.
+## Client kicked for a Lua checksum mismatch
+
+- `File doesn't match the one on the server`: build mismatch on a **vanilla** path. Not a mod error.
+- Build comparison: `grep '"buildid"' data/game/steamapps/appmanifest_380870.acf` with
+  `branches.public.buildid` from `app_info_print 380870`.
+- Restart after updating. Server app `380870` and client app `108600` use separate build IDs.

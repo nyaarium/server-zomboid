@@ -1,10 +1,9 @@
 FROM ubuntu:noble
 
 
-# Adjust the game version here
+# Steam branch passed to steamcmd.
 ENV STEAM_APP_ID="380870"
 ENV STEAM_BRANCH="public"
-ENV GAME_BUILD="24775771"
 
 
 RUN apt update -qq && apt install -qq -y locales tzdata ca-certificates && apt clean -y && rm -rf /var/lib/apt/lists/* \
@@ -46,19 +45,11 @@ RUN mkdir -p /root/steamcmd \
 
 
 ############################
-# Game server
+# Server scripts
 
-COPY docker/install.sh /root/install.sh
-RUN chmod +x /root/install.sh \
-	&& /root/install.sh \
-	&& rm /root/install.sh
-
-
-############################
-# Server start script
-
-COPY docker/docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
+COPY docker/install.sh /usr/local/bin/install.sh
+COPY docker/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/install.sh /usr/local/bin/docker-entrypoint.sh
 
 WORKDIR /app
 CMD ["sleep", "infinity"]

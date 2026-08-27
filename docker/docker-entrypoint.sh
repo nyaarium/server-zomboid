@@ -1,6 +1,9 @@
 #!/bin/bash
 
 set -e
+
+/usr/local/bin/install.sh
+
 cd /app
 
 # The engine lowercases x_extends paths; provide lowercase aliases on case-sensitive filesystems.
