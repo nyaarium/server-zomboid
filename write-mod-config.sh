@@ -56,13 +56,37 @@ PARSED=$(awk '
 			printf "KEY\t%s\n", key
 		}
 		if (count == 0) printf "WARN\tno enabled key, downloads but loads nothing: %s %s\n", id, title
+		else printf "ENID\t%s\n", id
 	}
 ' "$TABLE")
+
+MAPS=$(awk '
+	BEGIN { FS = "|"; inTable = 0; done = 0 }
+
+	!done && /^\| *Map folder *\|/ { inTable = 1; next }
+	inTable && /^\|[ -]*-[ -]*\|/ { next }
+
+	inTable {
+		if ($0 !~ /^\|/) { inTable = 0; done = 1; next }
+
+		folder = $2; gsub(/^[ \t]+|[ \t]+$/, "", folder)
+		id = $3; gsub(/^[ \t]+|[ \t]+$/, "", id)
+		if (folder == "") next
+		if (index(folder, ";")) printf "FAIL\tmap folder contains a semicolon: %s (line %d)\n", folder, NR
+		if (folder in seenFolder) printf "FAIL\tduplicate map folder %s (lines %d and %d)\n", folder, seenFolder[folder], NR
+		else seenFolder[folder] = NR
+		printf "MAP\t%s\t%s\n", folder, id
+	}
+' "$TABLE")
+
+PARSED=$(printf '%s\n%s\n' "$PARSED" "$MAPS" | grep . || true)
 
 FAILS=$(printf '%s\n' "$PARSED" | grep '^FAIL	' | cut -f2- || true)
 WARNS=$(printf '%s\n' "$PARSED" | grep '^WARN	' | cut -f2- || true)
 IDS=$(printf '%s\n' "$PARSED" | grep '^ID	' | cut -f2- || true)
 KEYS=$(printf '%s\n' "$PARSED" | grep '^KEY	' | cut -f2- || true)
+MAPROWS=$(printf '%s\n' "$PARSED" | grep '^MAP	' | cut -f2- || true)
+ENIDS=$(printf '%s\n' "$PARSED" | grep '^ENID	' | cut -f2- || true)
 
 [ -n "$IDS" ] || { echo "No rows parsed out of $TABLE" >&2; exit 1; }
 
@@ -72,16 +96,35 @@ KEYS=$(printf '%s\n' "$PARSED" | grep '^KEY	' | cut -f2- || true)
 id_count=$(printf '%s\n' "$IDS" | grep -c .)
 key_count=$(printf '%s\n' "$KEYS" | grep -c . || true)
 warn_count=$(printf '%s\n' "$WARNS" | grep -c . || true)
-echo "$id_count items, $key_count keys, $warn_count items with nothing enabled." >&2
+map_count=$(printf '%s\n' "$MAPROWS" | grep -c . || true)
+echo "$id_count items, $key_count keys, $map_count maps, $warn_count items with nothing enabled." >&2
+
+if [ -n "$MAPROWS" ]; then
+	MAPFAILS=$(printf '%s\n' "$MAPROWS" | awk -F'\t' -v enids="$ENIDS" '
+		BEGIN { n = split(enids, a, "\n"); for (i = 1; i <= n; i++) if (a[i] != "") enabled[a[i]] = 1 }
+		$2 == "-" || $2 == "" { next }
+		$2 !~ /^[0-9]+$/ { printf "map %s: workshop id is neither numeric nor \"-\": %s\n", $1, $2; next }
+		!($2 in enabled) { printf "map %s: workshop id %s is not an enabled mod in this table\n", $1, $2 }
+	')
+	[ -z "$MAPFAILS" ] || { printf '%s\n' "$MAPFAILS" | sed 's/^/ERROR: /' >&2; FAILS="${FAILS}${MAPFAILS}"; }
+fi
 
 [ -z "$FAILS" ] || exit 1
 
 join_semi() { printf '%s\n' "$1" | grep . | paste -sd ';' -; }
 WORKSHOP_LINE="WorkshopItems=$(join_semi "$IDS")"
 MODS_LINE="Mods=$(join_semi "$KEYS")"
+WRITE_MAP=1
+if [ -n "$MAPROWS" ]; then
+	MAP_LINE="Map=$(join_semi "$(printf '%s\n' "$MAPROWS" | cut -f1)")"
+else
+	WRITE_MAP=0
+	MAP_LINE="Map= (unchanged, no map table found)"
+fi
 
 echo "$WORKSHOP_LINE"
 echo "$MODS_LINE"
+echo "$MAP_LINE"
 
 if [ ! -f "$INI" ]; then
 	echo "No such ini: $INI" >&2
@@ -96,13 +139,15 @@ fi
 STAGED="./.write-mod-config.tmp"
 trap 'rm -f "$STAGED"' EXIT
 
-awk -v workshop="$WORKSHOP_LINE" -v mods="$MODS_LINE" '
+awk -v workshop="$WORKSHOP_LINE" -v mods="$MODS_LINE" -v map="$MAP_LINE" -v writeMap="$WRITE_MAP" '
 	/^WorkshopItems=/ { print workshop; seenWorkshop = 1; next }
 	/^Mods=/ { print mods; seenMods = 1; next }
+	/^Map=/ { if (writeMap == 1) { print map; seenMap = 1; next } }
 	{ print }
 	END {
 		if (!seenWorkshop) { print workshop; printf "warn:  WorkshopItems= was missing, appended\n" > "/dev/stderr" }
 		if (!seenMods) { print mods; printf "warn:  Mods= was missing, appended\n" > "/dev/stderr" }
+		if (writeMap == 1 && !seenMap) { print map; printf "warn:  Map= was missing, appended\n" > "/dev/stderr" }
 	}
 ' "$INI" > "$STAGED"
 

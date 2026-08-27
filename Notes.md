@@ -39,6 +39,13 @@ The server downloads mods to `/app/steamapps/workshop/content/108600/<workshop i
 Mount only `workshop`; `appmanifest_380870.acf` is stored in the parent `steamapps/` directory,
 and mounting that parent would hide the game manifest.
 
+## Map load order
+
+- `Map=` folder order. Earlier entries win. Vanilla `Muldraugh, KY` stays last.
+- Map rows at the bottom of `mod-table.md`. Workshop ID and enabled-key validation in `write-mod-config.sh`.
+- Map-cell files: `*.lotheader`, `*.lotpack`, `chunkdata_*.bin`. Spawn-location mods use `servertest_spawnregions.lua` instead.
+- Changes to `Map=` breaks the save. Wipe `Saves/`.
+
 ## AnimSets case workaround
 
 The engine lowercases paths while resolving `x_extends`. On Linux, that does not match mods'
@@ -48,6 +55,12 @@ On every boot, `docker-entrypoint.sh` creates an `animsets` symlink beside each 
 under the workshop content. The patch runs at startup because workshop content is mounted and empty
 when the image is built. On a fresh host, mods download after the entrypoint runs, so the first boot
 may still log these errors; the next boot applies the links.
+
+## Mod sandbox options
+
+- `media/sandbox-options.txt` defaults merged into `servertest_SandboxVars.lua` on next boot.
+- Existing table values preserved.
+- File growth after boot expected.
 
 ## Updating the game
 

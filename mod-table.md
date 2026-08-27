@@ -53,6 +53,7 @@
 | 2666336723 | `BurglarTrait` | Burglar Trait | gameplay | Adds a selectable Burglar trait granting starting mechanics/electrical skill. |
 | 2142622992 | `RepairAnyClothes` | Repair Any Clothes | gameplay | Makes all clothing items (vests, jumpsuits, shoes, etc.) repairable via tailoring. |
 | 2544353492 | `P4HasBeenRead` | Has Been Read | ui | Marks unread/partially-read books and other media with icon overlays. |
+| 3785397275 | `ExtractionMode` | Extraction Mode | gameplay | Persistent off-map hideout with a Tarkov-style raid loop. Includes map cells. |
 | 2618213077 | `82oshkoshM911` | '82 Oshkosh M911 + Military Semi-Trailers | content | Adds the M911 semi-truck plus 5 military semi-trailers (one needs Tsar's Common Library for fuel). |
 | 2409333430 | `91range` | '91 RANGE ROVER Classic | content | Adds the '91 Range Rover Classic SUV with a full armor kit. |
 | 2625625421 | `isoContainers` | Containers! | content | Adds towable ISO shipping containers/fuel tanks for base storage; tanks need Tsar's Common Library. |
@@ -80,3 +81,14 @@
 | 3287727378 | `92jeepYJ`, `92jeepYJJP18` | '92 Jeep YJ Wrangler | content | Adds the Jeep YJ Wrangler in 3 highly customizable variants. |
 | 3005903549 | `63beetle` | '63 Volkswagen 1300 Beetle | content | Adds the VW Beetle, including Dune Buggy and High Performance variants. |
 | 2991201484 | `69camaro` | '69 Chevrolet Camaro | content | Adds the '69 Chevrolet Camaro in 2 variants (SS/RS). |
+
+## Map load order
+
+`Map=` folder order. Earlier entries win. Keep vanilla `Muldraugh, KY` last.
+Numeric workshop IDs must match an enabled key above. Use `-` for vanilla folders.
+Map-cell mods only. Spawn-location mods use `servertest_spawnregions.lua`.
+
+| Map folder | Workshop ID |
+|---|---|
+| ExtractionMap | 3785397275 |
+| Muldraugh, KY | - |
